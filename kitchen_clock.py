@@ -1,4 +1,3 @@
-
 import gc
 import json
 import os
@@ -11,6 +10,7 @@ import displayio
 import microcontroller
 import neopixel
 import rtc
+import adafruit_ntp
 
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
 from adafruit_display_shapes.line import Line
@@ -126,9 +126,11 @@ def display_date_and_temp():
 
 def _pretty_hour(hour):
     if hour == 0:
-        return 12
+        pass
+        #return 12
     if hour > 12:
-        return hour - 12
+        pass
+        #return hour - 12
     return hour
 
 
