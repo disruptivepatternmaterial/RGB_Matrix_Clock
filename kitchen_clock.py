@@ -1,6 +1,3 @@
-# NOTE: Make sure you've created your secrets.py file before running this example
-# https://learn.adafruit.com/adafruit-pyportal/internet-connect#whats-a-secrets-file-17-2
-#
 
 import gc
 import json
@@ -50,7 +47,6 @@ COLOR_2 = 0xDBB3F5 #purple
 matrixportal.add_text(
     text_font=TIME_FONT,
     text_position=(0, 8),
-    text_color=0xFFFFFF,
 )
 matrixportal.preload_font(b"0123456789:", TIME_FONT)
 matrixportal.set_text(" ", MSG_TIME_IDX)
@@ -58,13 +54,14 @@ matrixportal.set_text(" ", MSG_TIME_IDX)
 # status/messages (ID = MSG_TXT_IDX)
 matrixportal.add_text(
     text_position=(0, 25),
+    text_font=MSG_FONT,
 )
 matrixportal.set_text(" ", MSG_TXT_IDX)
 
-SECS_COLOR = 0x404040
+SECS_COLOR = TICK_COLOR
 SECS_WIDTH = 4
 seconds_line = Line(
-    0, 0, matrixportal.display.width, matrixportal.display.height, 0xFF0000
+    0, 0, matrixportal.display.width, matrixportal.display.height, TICK_COLOR
 )
 seconds_index = len(matrixportal.splash)
 matrixportal.splash.append(seconds_line)
@@ -148,12 +145,14 @@ def display_main():
     )
     if "local_time" not in counters:
         _set_text_center(str(int(time.monotonic())), MSG_TIME_IDX)
+        matrixportal._text_color[MSG_TIME_IDX] = COLOR_1
         return
 
     if cached_mins == now.tm_min and not display_needs_refresh:
         return
 
     _set_text_center(f"{_pretty_hour(now.tm_hour)}:{now.tm_min:02}", MSG_TIME_IDX)
+    matrixportal._text_color[MSG_TIME_IDX] = TIME_COLOR
 
     if not msg_state:
         display_date_and_temp()
