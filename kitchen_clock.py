@@ -22,7 +22,7 @@ from secrets import secrets
 MSG_TIME_IDX = 0
 MSG_TXT_IDX = 1
 
-matrixportal = MatrixPortal(debug=True)
+matrixportal = MatrixPortal(debug=True, bit_depth=6)
 print("Connecting to WiFi...")
 wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(
     matrixportal._esp, secrets, None
