@@ -38,8 +38,8 @@ global_rtc = rtc.RTC()
 TIME_FONT = "clock26.bdf"
 MSG_FONT = "6x12.bdf"
 
-TIME_COLOR = 0xB3EDF5 #blueish
-TICK_COLOR = 0xF5BAB3 #redish
+TIME_COLOR = 0xFFEDF5 #blueish
+TICK_COLOR = 0xFF1010 #redish
 COLOR_1 = 0xCDF5B3 #greenish
 COLOR_2 = 0xDBB3F5 #purple
 
