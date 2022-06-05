@@ -10,7 +10,8 @@ import displayio
 import microcontroller
 import neopixel
 import rtc
-import adafruit_ntp
+from adafruit_ntp import NTP
+import adafruit_requests
 
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
 from adafruit_display_shapes.line import Line
@@ -22,13 +23,14 @@ from secrets import secrets
 MSG_TIME_IDX = 0
 MSG_TXT_IDX = 1
 
-matrixportal = MatrixPortal(debug=True, bit_depth=6)
+matrixportal = MatrixPortal(debug=False, bit_depth=6)
 print("Connecting to WiFi...")
 wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(
     matrixportal._esp, secrets, None
 )
 wifi.connect()
 print("My IP address is", matrixportal._esp.pretty_ip(matrixportal._esp.ip_address))
+request = adafruit_requests.Session(socket)
 
 # ------- Real Time Clock  ------- #
 
@@ -518,7 +520,7 @@ client = MQTT.MQTT(
     password=secrets["broker_pass"],
 )
 client.attach_logger()
-client.set_logger_level("DEBUG")
+client.set_logger_level("INFO")
 
 # Connect callback handlers to client
 client.on_connect = connect
@@ -532,7 +534,7 @@ try:
     client.connect()
 except Exception as e:
     print(f"FATAL! Unable to MQTT connect to {client.broker}: {e}")
-    time.sleep(120)
+    time.sleep(30)
     # bye bye cruel world
     microcontroller.reset()
 
@@ -605,6 +607,14 @@ def _try_reconnect(e):
         print(f"FATAL! Failed reconnect: {e}")
         microcontroller.reset()
 
+def get_time_from_url():
+    response = request.get("http://worldtimeapi.org/api/ip")
+    time_data = response.json()
+    unixtime = int(time_data['unixtime']) + int(time_data['raw_offset'])
+    print("URL time: ", response.headers['date'])
+    global_rtc.datetime = time.localtime( unixtime )
+    _inc_counter("local_time")
+
 
 # ------------- Main loop ------------- #
 
@@ -618,6 +628,7 @@ TS_INTERVALS = {
     LED_BLINK: TS(LED_BLINK_DEFAULT, interval_led_blink),  # may be overridden via mqtt
     "1sec": TS(1, one_sec_tick),
     "img_frame": TS(0.1, advance_img),
+    "get_time": TS(60*60, get_time_from_url),
 }
 
 
