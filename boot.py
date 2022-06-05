@@ -26,11 +26,12 @@ for button in buttons:
         buttons_pressed += 1
 
 if not buttons_pressed:
+    pass
     # Disable devices only if button is not pressed.
-    usb_midi.disable()
-    storage.disable_usb_drive()
-    usb_cdc.enable(console=False, data=False)
-    usb_hid.disable()
+    #usb_midi.disable()
+    #storage.disable_usb_drive()
+    #usb_cdc.enable(console=False, data=False)
+    #usb_hid.disable()
 
 
 

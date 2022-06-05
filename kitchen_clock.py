@@ -38,7 +38,13 @@ print("My IP address is", matrixportal._esp.pretty_ip(matrixportal._esp.ip_addre
 global_rtc = rtc.RTC()
 
 # --------------- Text ----------------- #
-TIME_FONT = "time_font.bdf"
+TIME_FONT = "clock26.bdf"
+MSG_FONT = "6x12.bdf"
+
+TIME_COLOR = 0xB3EDF5 #blueish
+TICK_COLOR = 0xF5BAB3 #redish
+COLOR_1 = 0xCDF5B3 #greenish
+COLOR_2 = 0xDBB3F5 #purple
 
 # hour (ID = MSG_TIME_IDX)
 matrixportal.add_text(
@@ -291,7 +297,7 @@ outside_temp = None
 
 def _parse_temperature_outside(topic, message):
     global outside_temp
-    outside_temp = int(message)
+    outside_temp = float(message)
     _inc_counter("outside_temp")
 
 
@@ -452,8 +458,8 @@ mqtt_subs = {
     f"{mqtt_topic}/blinkrate": _parse_blinkrate,
     f"{mqtt_topic}/msg": _parse_msg_message,
     f"{mqtt_topic}/img": _parse_img,
-    "/aio/local_time": _parse_localtime_message,
-    "/sensor/temperature_outside": _parse_temperature_outside,
+    f"{mqtt_topic}/local_time": _parse_localtime_message,
+    f"{mqtt_topic}/sensor/temperature_outside": _parse_temperature_outside,
 }
 
 # ------------- MQTT Functions ------------- #
