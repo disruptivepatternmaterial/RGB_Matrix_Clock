@@ -286,6 +286,7 @@ def _parse_localtime_message(topic, message):
         now = time.struct_time(
             (year, month, mday, hours, minutes, seconds, week_day, year_day, is_dst)
         )
+
         global_rtc.datetime = now
         _inc_counter("local_time")
     except Exception as e:
