@@ -40,10 +40,12 @@ global_rtc = rtc.RTC()
 TIME_FONT = "clock26.bdf"
 MSG_FONT = "6x12.bdf"
 
-TIME_COLOR = 0xFFEDF5 #blueish
-TICK_COLOR = 0xFF1010 #redish
-COLOR_1 = 0xCDF5B3 #greenish
-COLOR_2 = 0xDBB3F5 #purple
+NIGHT_FALL = secrets.get("night_fall")
+MORNING = secrets.get("morning")
+
+TIME_COLOR = secrets.get("time_color") 
+TICK_COLOR = secrets.get("tick_color")
+NIGHT_COLOR = secrets.get("night_color")
 
 # hour (ID = MSG_TIME_IDX)
 matrixportal.add_text(
@@ -63,7 +65,7 @@ matrixportal.set_text(" ", MSG_TXT_IDX)
 SECS_COLOR = TICK_COLOR
 SECS_WIDTH = 4
 seconds_line = Line(
-    0, 0, matrixportal.display.width, matrixportal.display.height, TICK_COLOR
+    0, 0, matrixportal.display.width, matrixportal.display.height, SECS_COLOR
 )
 seconds_index = len(matrixportal.splash)
 matrixportal.splash.append(seconds_line)
@@ -122,7 +124,12 @@ def display_date_and_temp():
 
     if outside_temp is not None:
         info += f" {outside_temp}F"
-    matrixportal._text_color[MSG_TXT_IDX] = week_days[now.tm_wday][1]
+    #trying to make it all red at night
+    if now.tm_hour > NIGHT_FALL or now.tm_hour < MORNING:
+        matrixportal._text_color[MSG_TXT_IDX] = NIGHT_COLOR
+    else:
+        matrixportal._text_color[MSG_TXT_IDX] = week_days[now.tm_wday][1]
+
     _set_text_center(info, MSG_TXT_IDX)
 
 
@@ -130,9 +137,12 @@ def _pretty_hour(hour):
     if hour == 0:
         pass
         #return 12
-    if hour > 12:
-        pass
+    if hour > NIGHT_FALL or hour < MORNING:
+        matrixportal._text_color[MSG_TIME_IDX] = NIGHT_COLOR
+        #pass
         #return hour - 12
+    else:
+        matrixportal._text_color[MSG_TIME_IDX] = TIME_COLOR
     return hour
 
 
@@ -144,12 +154,18 @@ def display_main():
     global display_needs_refresh, cached_mins, counters
 
     now = global_rtc.datetime
+
+    if now.tm_hour > NIGHT_FALL or now.tm_hour < MORNING:
+        NIGHT_TICK_COLOR = NIGHT_COLOR
+    else:
+        NIGHT_TICK_COLOR = SECS_COLOR
+       
     matrixportal.splash[seconds_index] = Line(
-        now.tm_sec, 1, now.tm_sec + SECS_WIDTH, 1, SECS_COLOR
+        now.tm_sec, 1, now.tm_sec + SECS_WIDTH, 1, NIGHT_TICK_COLOR
     )
     if "local_time" not in counters:
         _set_text_center(str(int(time.monotonic())), MSG_TIME_IDX)
-        matrixportal._text_color[MSG_TIME_IDX] = COLOR_1
+        matrixportal._text_color[MSG_TIME_IDX] = TIME_COLOR
         return
 
     if cached_mins == now.tm_min and not display_needs_refresh:
@@ -194,7 +210,6 @@ def one_sec_tick():
         # check if scroll needs to be started
         if matrixportal._scrolling_index is None:
             matrixportal.scroll()
-
         display_main()
 
 
@@ -613,6 +628,7 @@ def get_time_from_url():
     unixtime = int(time_data['unixtime']) + int(time_data['raw_offset'])
     print("URL time: ", response.headers['date'])
     global_rtc.datetime = time.localtime( unixtime )
+    #print("Local time: ", global_rtc.datetime)
     _inc_counter("local_time")
 
 
@@ -649,7 +665,7 @@ while True:
 
     if not img_state and matrixportal._scrolling_index is not None:
         # Scroll the text block, but only if there is work
-        # There is an explicit in a less frequent interval (one_sec_tick)
+        # There is an explicit in a less frequent interval (one_sec_tick) <<WTF does this mean???
         matrixportal.scroll()
 
     now = time.monotonic()
