@@ -10,11 +10,13 @@ import displayio
 import microcontroller
 import neopixel
 import rtc
-from adafruit_ntp import NTP
 import adafruit_requests
+
+from adafruit_bme280 import basic as adafruit_bme280
 
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
 from adafruit_display_shapes.line import Line
+from adafruit_display_shapes.rect import Rect
 from adafruit_esp32spi import adafruit_esp32spi_wifimanager
 import adafruit_minimqtt.adafruit_minimqtt as MQTT
 from mini_matrixportal import MatrixPortal
@@ -22,6 +24,11 @@ from secrets import secrets
 
 MSG_TIME_IDX = 0
 MSG_TXT_IDX = 1
+
+# Create sensor object, using the board's default I2C bus.
+i2c = board.I2C()  # uses board.SCL and board.SDA
+bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c,118)
+bme280.sea_level_pressure = 1013.25 
 
 matrixportal = MatrixPortal(debug=False, bit_depth=6)
 print("Connecting to WiFi...")
@@ -67,9 +74,14 @@ SECS_WIDTH = 4
 seconds_line = Line(
     0, 0, matrixportal.display.width, matrixportal.display.height, SECS_COLOR
 )
+
 seconds_index = len(matrixportal.splash)
 matrixportal.splash.append(seconds_line)
 
+frame_lines = Rect(
+    0, 0, matrixportal.display.width, matrixportal.display.height, fill=None, outline=0x040404
+)
+matrixportal.splash.append(frame_lines)
 
 def _set_text_center(val, index, text_color=None):
     pixels_used = 0
@@ -163,6 +175,7 @@ def display_main():
     matrixportal.splash[seconds_index] = Line(
         now.tm_sec, 1, now.tm_sec + SECS_WIDTH, 1, NIGHT_TICK_COLOR
     )
+
     if "local_time" not in counters:
         _set_text_center(str(int(time.monotonic())), MSG_TIME_IDX)
         matrixportal._text_color[MSG_TIME_IDX] = TIME_COLOR
@@ -316,7 +329,7 @@ outside_temp = None
 
 def _parse_temperature_outside(topic, message):
     global outside_temp
-    outside_temp = float(message)
+    outside_temp = round(float(message))
     _inc_counter("outside_temp")
 
 
@@ -469,6 +482,7 @@ def advance_img():
 
 mqtt_topic = secrets.get("topic_prefix") or "/matrixportal"
 mqtt_pub_status = f"{mqtt_topic}/status"
+mqtt_pub_measurements = f"{mqtt_topic}/sensor/measurement/clock2"
 
 mqtt_subs = {
     f"{mqtt_topic}/ping": _parse_ping,
@@ -591,6 +605,15 @@ set_brightness("on")
 
 # ------------- Iteration routines ------------- #
 
+def interval_send_measurements():
+    global counters
+    value = {
+        "temperature": bme280.temperature,
+        "humidity": bme280.humidity,
+        "pressure": bme280.pressure,
+    }
+    client.publish(mqtt_pub_measurements, json.dumps(value))
+    print(f"send_measurements: {mqtt_pub_measurements}: {value}")
 
 def interval_send_status():
     global counters
@@ -623,14 +646,18 @@ def _try_reconnect(e):
         microcontroller.reset()
 
 def get_time_from_url():
-    response = request.get("http://worldtimeapi.org/api/ip")
-    time_data = response.json()
-    unixtime = int(time_data['unixtime']) + int(time_data['raw_offset'])
-    print("URL time: ", response.headers['date'])
-    global_rtc.datetime = time.localtime( unixtime )
-    #print("Local time: ", global_rtc.datetime)
-    _inc_counter("local_time")
-
+    try:
+        response = request.get("http://worldtimeapi.org/api/ip", timeout=5)
+        time_data = response.json()
+        unixtime = int(time_data['unixtime']) + int(time_data['raw_offset']) + int(time_data['dst_offset'])
+        print("URL time: ", response.headers['date'])
+        global_rtc.datetime = time.localtime( unixtime )
+        #print("Local time: ", global_rtc.datetime)
+        _inc_counter("local_time")
+    except Exception as e:
+        print(f"FATAL! Failed reconnect: {e}")
+        time.sleep(30)
+        microcontroller.reset()
 
 # ------------- Main loop ------------- #
 
@@ -645,6 +672,7 @@ TS_INTERVALS = {
     "1sec": TS(1, one_sec_tick),
     "img_frame": TS(0.1, advance_img),
     "get_time": TS(60*60, get_time_from_url),
+    "send_measurements": TS(2.5 * 60, interval_send_measurements),
 }
 
 
