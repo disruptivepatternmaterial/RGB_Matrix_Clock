@@ -1,4 +1,4 @@
-# kitchen_clock
+
 CircuitPython based project for Adafruit MatrixPortal controlled via MQTT
 
 working on move to standard libs
