@@ -13,30 +13,49 @@ import rtc
 import adafruit_requests
 
 from adafruit_bme280 import basic as adafruit_bme280
-
-import adafruit_esp32spi.adafruit_esp32spi_socket as socket
 from adafruit_display_shapes.line import Line
 from adafruit_display_shapes.rect import Rect
-from adafruit_esp32spi import adafruit_esp32spi_wifimanager
 import adafruit_minimqtt.adafruit_minimqtt as MQTT
+
+
+#adafruit_esp32spi
+
+import adafruit_esp32spi.adafruit_esp32spi_socket as socket
+from adafruit_esp32spi import adafruit_esp32spi_wifimanager
 from mini_matrixportal import MatrixPortal
+
+#from adafruit_matrixportal.network import Network
+#from adafruit_matrixportal.matrix import Matrix
+
 from secrets import secrets
 
 MSG_TIME_IDX = 0
 MSG_TXT_IDX = 1
 
 # Create sensor object, using the board's default I2C bus.
-i2c = board.I2C()  # uses board.SCL and board.SDA
-bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c,118)
-bme280.sea_level_pressure = 1013.25 
+try:
+    i2c = board.I2C()  # uses board.SCL and board.SDA
+    bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c,118)
+    bme280.sea_level_pressure = 1013.25 
+except Exception as e:
+    print("BME280 I2C not present")
 
 matrixportal = MatrixPortal(debug=False, bit_depth=6)
 print("Connecting to WiFi...")
 wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(
     matrixportal._esp, secrets, None
 )
+LOCAL_MAC = [hex(i) for i in matrixportal._esp.MAC_address]
+#print(LOCAL_MAC)
+if LOCAL_MAC[5] == '0x58':
+    matrixportal._esp.set_hostname("clock2")
+else:
+    matrixportal._esp.set_hostname("clock1")
+
 wifi.connect()
 print("My IP address is", matrixportal._esp.pretty_ip(matrixportal._esp.ip_address))
+#print("MAC addr:", [hex(i) for i in matrixportal._esp.MAC_address])
+
 request = adafruit_requests.Session(socket)
 
 # ------- Real Time Clock  ------- #
@@ -606,14 +625,17 @@ set_brightness("on")
 # ------------- Iteration routines ------------- #
 
 def interval_send_measurements():
-    global counters
-    value = {
-        "temperature": bme280.temperature,
-        "humidity": bme280.humidity,
-        "pressure": bme280.pressure,
-    }
-    client.publish(mqtt_pub_measurements, json.dumps(value))
-    print(f"send_measurements: {mqtt_pub_measurements}: {value}")
+    try:
+        global counters
+        value = {
+            "temperature": bme280.temperature,
+            "humidity": bme280.humidity,
+            "pressure": bme280.pressure,
+        }
+        client.publish(mqtt_pub_measurements, json.dumps(value))
+        print(f"send_measurements: {mqtt_pub_measurements}: {value}")
+    except Exception as e:
+        print(f"Sensor issues: {e}")
 
 def interval_send_status():
     global counters
