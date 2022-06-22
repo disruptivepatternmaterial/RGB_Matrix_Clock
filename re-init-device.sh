@@ -1,5 +1,5 @@
 #!/bin/sh
-sudo rm -r /Volumes/CIRCUITPY
+sudo rm -r -f /Volumes/CIRCUITPY
 cp -r  ~/Documents/GitHub/kitchen_clock/lib  /Volumes/CIRCUITPY/lib
 cp -r  ~/Documents/GitHub/kitchen_clock/bmps  /Volumes/CIRCUITPY/bmps
 cp ~/Documents/GitHub/kitchen_clock/6x12.bdf /Volumes/CIRCUITPY/

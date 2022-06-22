@@ -628,7 +628,8 @@ def interval_send_measurements():
     try:
         global counters
         value = {
-            "temperature": bme280.temperature,
+            "temperature_C": bme280.temperature,
+            "temperature_F": (bme280.temperature * 1.8000) + 32.0,
             "humidity": bme280.humidity,
             "pressure": bme280.pressure,
         }
